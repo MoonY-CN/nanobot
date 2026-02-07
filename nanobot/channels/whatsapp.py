@@ -1,4 +1,4 @@
-"""WhatsApp channel implementation using Node.js bridge."""
+"""使用 Node.js 桥的 WhatsApp 频道实现。"""
 
 import asyncio
 import json
@@ -14,10 +14,10 @@ from nanobot.config.schema import WhatsAppConfig
 
 class WhatsAppChannel(BaseChannel):
     """
-    WhatsApp channel that connects to a Node.js bridge.
+    连接到 Node.js 桥的 WhatsApp 频道。
     
-    The bridge uses @whiskeysockets/baileys to handle the WhatsApp Web protocol.
-    Communication between Python and Node.js is via WebSocket.
+    该桥使用 @whiskeysockets/baileys 处理 WhatsApp Web 协议。
+    Python 和 Node.js 之间通过 WebSocket 通信。
     """
     
     name = "whatsapp"
@@ -29,12 +29,12 @@ class WhatsAppChannel(BaseChannel):
         self._connected = False
     
     async def start(self) -> None:
-        """Start the WhatsApp channel by connecting to the bridge."""
+        """通过连接到桥启动 WhatsApp 频道。"""
         import websockets
         
         bridge_url = self.config.bridge_url
         
-        logger.info(f"Connecting to WhatsApp bridge at {bridge_url}...")
+        logger.info(f"正在连接到 {bridge_url} 的 WhatsApp 桥...")
         
         self._running = True
         
@@ -43,28 +43,28 @@ class WhatsAppChannel(BaseChannel):
                 async with websockets.connect(bridge_url) as ws:
                     self._ws = ws
                     self._connected = True
-                    logger.info("Connected to WhatsApp bridge")
+                    logger.info("已连接到 WhatsApp 桥")
                     
-                    # Listen for messages
+                    # 监听消息
                     async for message in ws:
                         try:
                             await self._handle_bridge_message(message)
                         except Exception as e:
-                            logger.error(f"Error handling bridge message: {e}")
+                            logger.error(f"处理桥消息时出错：{e}")
                     
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 self._connected = False
                 self._ws = None
-                logger.warning(f"WhatsApp bridge connection error: {e}")
+                logger.warning(f"WhatsApp 桥连接错误：{e}")
                 
                 if self._running:
-                    logger.info("Reconnecting in 5 seconds...")
+                    logger.info("5 秒后重新连接...")
                     await asyncio.sleep(5)
     
     async def stop(self) -> None:
-        """Stop the WhatsApp channel."""
+        """停止 WhatsApp 频道。"""
         self._running = False
         self._connected = False
         
@@ -73,9 +73,9 @@ class WhatsAppChannel(BaseChannel):
             self._ws = None
     
     async def send(self, msg: OutboundMessage) -> None:
-        """Send a message through WhatsApp."""
+        """通过 WhatsApp 发送消息。"""
         if not self._ws or not self._connected:
-            logger.warning("WhatsApp bridge not connected")
+            logger.warning("WhatsApp 桥未连接")
             return
         
         try:
@@ -86,35 +86,35 @@ class WhatsAppChannel(BaseChannel):
             }
             await self._ws.send(json.dumps(payload))
         except Exception as e:
-            logger.error(f"Error sending WhatsApp message: {e}")
+            logger.error(f"发送 WhatsApp 消息时出错：{e}")
     
     async def _handle_bridge_message(self, raw: str) -> None:
-        """Handle a message from the bridge."""
+        """处理来自桥的消息。"""
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            logger.warning(f"Invalid JSON from bridge: {raw[:100]}")
+            logger.warning(f"来自桥的无效 JSON：{raw[:100]}")
             return
         
         msg_type = data.get("type")
         
         if msg_type == "message":
-            # Incoming message from WhatsApp
+            # 来自 WhatsApp 的传入消息
             sender = data.get("sender", "")
             content = data.get("content", "")
             
-            # sender is typically: <phone>@s.whatsapp.net
-            # Extract just the phone number as chat_id
+            # sender 通常是：<phone>@s.whatsapp.net
+            # 仅提取电话号码作为 chat_id
             chat_id = sender.split("@")[0] if "@" in sender else sender
             
-            # Handle voice transcription if it's a voice message
-            if content == "[Voice Message]":
-                logger.info(f"Voice message received from {chat_id}, but direct download from bridge is not yet supported.")
-                content = "[Voice Message: Transcription not available for WhatsApp yet]"
+            # 处理语音转录（如果是语音消息）
+            if content == "[语音消息]":
+                logger.info(f"收到来自 {chat_id} 的语音消息，但桥的直接下载尚不支持。")
+                content = "[语音消息：WhatsApp 转录尚不可用]"
             
             await self._handle_message(
                 sender_id=chat_id,
-                chat_id=sender,  # Use full JID for replies
+                chat_id=sender,  # 使用完整 JID 进行回复
                 content=content,
                 metadata={
                     "message_id": data.get("id"),
@@ -124,9 +124,9 @@ class WhatsAppChannel(BaseChannel):
             )
         
         elif msg_type == "status":
-            # Connection status update
+            # 连接状态更新
             status = data.get("status")
-            logger.info(f"WhatsApp status: {status}")
+            logger.info(f"WhatsApp 状态：{status}")
             
             if status == "connected":
                 self._connected = True
@@ -134,8 +134,8 @@ class WhatsAppChannel(BaseChannel):
                 self._connected = False
         
         elif msg_type == "qr":
-            # QR code for authentication
-            logger.info("Scan QR code in the bridge terminal to connect WhatsApp")
+            # 认证用的二维码
+            logger.info("在桥终端扫描二维码以连接 WhatsApp")
         
         elif msg_type == "error":
-            logger.error(f"WhatsApp bridge error: {data.get('error')}")
+            logger.error(f"WhatsApp 桥错误：{data.get('error')}")

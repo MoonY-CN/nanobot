@@ -1,4 +1,4 @@
-"""Telegram channel implementation using python-telegram-bot."""
+"""使用 python-telegram-bot 的 Telegram 频道实现。"""
 
 import asyncio
 import re
@@ -15,12 +15,12 @@ from nanobot.config.schema import TelegramConfig
 
 def _markdown_to_telegram_html(text: str) -> str:
     """
-    Convert markdown to Telegram-safe HTML.
+    将 markdown 转换为 Telegram 安全的 HTML。
     """
     if not text:
         return ""
     
-    # 1. Extract and protect code blocks (preserve content from other processing)
+    # 1. 提取并保护代码块（保护内容免受其他处理）
     code_blocks: list[str] = []
     def save_code_block(m: re.Match) -> str:
         code_blocks.append(m.group(1))
@@ -28,7 +28,7 @@ def _markdown_to_telegram_html(text: str) -> str:
     
     text = re.sub(r'```[\w]*\n?([\s\S]*?)```', save_code_block, text)
     
-    # 2. Extract and protect inline code
+    # 2. 提取并保护行内代码
     inline_codes: list[str] = []
     def save_inline_code(m: re.Match) -> str:
         inline_codes.append(m.group(1))
@@ -36,40 +36,40 @@ def _markdown_to_telegram_html(text: str) -> str:
     
     text = re.sub(r'`([^`]+)`', save_inline_code, text)
     
-    # 3. Headers # Title -> just the title text
+    # 3. 标题 # 标题 -> 仅标题文本
     text = re.sub(r'^#{1,6}\s+(.+)$', r'\1', text, flags=re.MULTILINE)
     
-    # 4. Blockquotes > text -> just the text (before HTML escaping)
+    # 4. 引用 > 文本 -> 仅文本（在 HTML 转义之前）
     text = re.sub(r'^>\s*(.*)$', r'\1', text, flags=re.MULTILINE)
     
-    # 5. Escape HTML special characters
+    # 5. 转义 HTML 特殊字符
     text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     
-    # 6. Links [text](url) - must be before bold/italic to handle nested cases
+    # 6. 链接 [text](url) - 必须在粗体/斜体之前处理嵌套情况
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
     
-    # 7. Bold **text** or __text__
+    # 7. 粗体 **text** 或 __text__
     text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'__(.+?)__', r'<b>\1</b>', text)
     
-    # 8. Italic _text_ (avoid matching inside words like some_var_name)
+    # 8. 斜体 _text_（避免匹配单词内部如 some_var_name）
     text = re.sub(r'(?<![a-zA-Z0-9])_([^_]+)_(?![a-zA-Z0-9])', r'<i>\1</i>', text)
     
-    # 9. Strikethrough ~~text~~
+    # 9. 删除线 ~~text~~
     text = re.sub(r'~~(.+?)~~', r'<s>\1</s>', text)
     
-    # 10. Bullet lists - item -> • item
+    # 10. 项目符号列表 - item -> • item
     text = re.sub(r'^[-*]\s+', '• ', text, flags=re.MULTILINE)
     
-    # 11. Restore inline code with HTML tags
+    # 11. 使用 HTML 标签恢复行内代码
     for i, code in enumerate(inline_codes):
-        # Escape HTML in code content
+        # 转义代码内容中的 HTML
         escaped = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         text = text.replace(f"\x00IC{i}\x00", f"<code>{escaped}</code>")
     
-    # 12. Restore code blocks with HTML tags
+    # 12. 使用 HTML 标签恢复代码块
     for i, code in enumerate(code_blocks):
-        # Escape HTML in code content
+        # 转义代码内容中的 HTML
         escaped = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         text = text.replace(f"\x00CB{i}\x00", f"<pre><code>{escaped}</code></pre>")
     
@@ -78,9 +78,9 @@ def _markdown_to_telegram_html(text: str) -> str:
 
 class TelegramChannel(BaseChannel):
     """
-    Telegram channel using long polling.
+    使用长轮询的 Telegram 频道。
     
-    Simple and reliable - no webhook/public IP needed.
+    简单可靠 - 不需要 webhook/公共 IP。
     """
     
     name = "telegram"
@@ -90,24 +90,24 @@ class TelegramChannel(BaseChannel):
         self.config: TelegramConfig = config
         self.groq_api_key = groq_api_key
         self._app: Application | None = None
-        self._chat_ids: dict[str, int] = {}  # Map sender_id to chat_id for replies
+        self._chat_ids: dict[str, int] = {}  # 将 sender_id 映射到 chat_id 以进行回复
     
     async def start(self) -> None:
-        """Start the Telegram bot with long polling."""
+        """使用长轮询启动 Telegram 机器人。"""
         if not self.config.token:
-            logger.error("Telegram bot token not configured")
+            logger.error("Telegram 机器人令牌未配置")
             return
         
         self._running = True
         
-        # Build the application
+        # 构建应用
         self._app = (
             Application.builder()
             .token(self.config.token)
             .build()
         )
         
-        # Add message handler for text, photos, voice, documents
+        # 为文本、照片、语音、文档添加消息处理器
         self._app.add_handler(
             MessageHandler(
                 (filters.TEXT | filters.PHOTO | filters.VOICE | filters.AUDIO | filters.Document.ALL) 
@@ -116,51 +116,51 @@ class TelegramChannel(BaseChannel):
             )
         )
         
-        # Add /start command handler
+        # 添加 /start 命令处理器
         from telegram.ext import CommandHandler
         self._app.add_handler(CommandHandler("start", self._on_start))
         
-        logger.info("Starting Telegram bot (polling mode)...")
+        logger.info("正在启动 Telegram 机器人（轮询模式）...")
         
-        # Initialize and start polling
+        # 初始化并开始轮询
         await self._app.initialize()
         await self._app.start()
         
-        # Get bot info
+        # 获取机器人信息
         bot_info = await self._app.bot.get_me()
-        logger.info(f"Telegram bot @{bot_info.username} connected")
+        logger.info(f"Telegram 机器人 @{bot_info.username} 已连接")
         
-        # Start polling (this runs until stopped)
+        # 开始轮询（一直运行直到停止）
         await self._app.updater.start_polling(
             allowed_updates=["message"],
-            drop_pending_updates=True  # Ignore old messages on startup
+            drop_pending_updates=True  # 启动时忽略旧消息
         )
         
-        # Keep running until stopped
+        # 保持运行直到停止
         while self._running:
             await asyncio.sleep(1)
     
     async def stop(self) -> None:
-        """Stop the Telegram bot."""
+        """停止 Telegram 机器人。"""
         self._running = False
         
         if self._app:
-            logger.info("Stopping Telegram bot...")
+            logger.info("正在停止 Telegram 机器人...")
             await self._app.updater.stop()
             await self._app.stop()
             await self._app.shutdown()
             self._app = None
     
     async def send(self, msg: OutboundMessage) -> None:
-        """Send a message through Telegram."""
+        """通过 Telegram 发送消息。"""
         if not self._app:
-            logger.warning("Telegram bot not running")
+            logger.warning("Telegram 机器人未运行")
             return
         
         try:
-            # chat_id should be the Telegram chat ID (integer)
+            # chat_id 应该是 Telegram 聊天 ID（整数）
             chat_id = int(msg.chat_id)
-            # Convert markdown to Telegram HTML
+            # 将 markdown 转换为 Telegram HTML
             html_content = _markdown_to_telegram_html(msg.content)
             await self._app.bot.send_message(
                 chat_id=chat_id,
@@ -168,31 +168,31 @@ class TelegramChannel(BaseChannel):
                 parse_mode="HTML"
             )
         except ValueError:
-            logger.error(f"Invalid chat_id: {msg.chat_id}")
+            logger.error(f"无效的 chat_id：{msg.chat_id}")
         except Exception as e:
-            # Fallback to plain text if HTML parsing fails
-            logger.warning(f"HTML parse failed, falling back to plain text: {e}")
+            # 如果 HTML 解析失败则回退到纯文本
+            logger.warning(f"HTML 解析失败，回退到纯文本：{e}")
             try:
                 await self._app.bot.send_message(
                     chat_id=int(msg.chat_id),
                     text=msg.content
                 )
             except Exception as e2:
-                logger.error(f"Error sending Telegram message: {e2}")
+                logger.error(f"发送 Telegram 消息时出错：{e2}")
     
     async def _on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /start command."""
+        """处理 /start 命令。"""
         if not update.message or not update.effective_user:
             return
         
         user = update.effective_user
         await update.message.reply_text(
-            f"👋 Hi {user.first_name}! I'm nanobot.\n\n"
-            "Send me a message and I'll respond!"
+            f"👋 你好 {user.first_name}！我是 nanobot。\n\n"
+            "给我发消息，我会回复你！"
         )
     
     async def _on_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle incoming messages (text, photos, voice, documents)."""
+        """处理传入的消息（文本、照片、语音、文档）。"""
         if not update.message or not update.effective_user:
             return
         
@@ -200,30 +200,30 @@ class TelegramChannel(BaseChannel):
         user = update.effective_user
         chat_id = message.chat_id
         
-        # Use stable numeric ID, but keep username for allowlist compatibility
+        # 使用稳定的数字 ID，但保留用户名以兼容允许列表
         sender_id = str(user.id)
         if user.username:
             sender_id = f"{sender_id}|{user.username}"
         
-        # Store chat_id for replies
+        # 存储 chat_id 用于回复
         self._chat_ids[sender_id] = chat_id
         
-        # Build content from text and/or media
+        # 从文本和/或媒体构建内容
         content_parts = []
         media_paths = []
         
-        # Text content
+        # 文本内容
         if message.text:
             content_parts.append(message.text)
         if message.caption:
             content_parts.append(message.caption)
         
-        # Handle media files
+        # 处理媒体文件
         media_file = None
         media_type = None
         
         if message.photo:
-            media_file = message.photo[-1]  # Largest photo
+            media_file = message.photo[-1]  # 最大的照片
             media_type = "image"
         elif message.voice:
             media_file = message.voice
@@ -235,13 +235,13 @@ class TelegramChannel(BaseChannel):
             media_file = message.document
             media_type = "file"
         
-        # Download media if present
+        # 如果存在则下载媒体
         if media_file and self._app:
             try:
                 file = await self._app.bot.get_file(media_file.file_id)
                 ext = self._get_extension(media_type, getattr(media_file, 'mime_type', None))
                 
-                # Save to workspace/media/
+                # 保存到 workspace/media/
                 from pathlib import Path
                 media_dir = Path.home() / ".nanobot" / "media"
                 media_dir.mkdir(parents=True, exist_ok=True)
@@ -251,29 +251,29 @@ class TelegramChannel(BaseChannel):
                 
                 media_paths.append(str(file_path))
                 
-                # Handle voice transcription
+                # 处理语音转录
                 if media_type == "voice" or media_type == "audio":
                     from nanobot.providers.transcription import GroqTranscriptionProvider
                     transcriber = GroqTranscriptionProvider(api_key=self.groq_api_key)
                     transcription = await transcriber.transcribe(file_path)
                     if transcription:
-                        logger.info(f"Transcribed {media_type}: {transcription[:50]}...")
-                        content_parts.append(f"[transcription: {transcription}]")
+                        logger.info(f"转录 {media_type}：{transcription[:50]}...")
+                        content_parts.append(f"[转录：{transcription}]")
                     else:
-                        content_parts.append(f"[{media_type}: {file_path}]")
+                        content_parts.append(f"[{media_type}：{file_path}]")
                 else:
-                    content_parts.append(f"[{media_type}: {file_path}]")
+                    content_parts.append(f"[{media_type}：{file_path}]")
                     
-                logger.debug(f"Downloaded {media_type} to {file_path}")
+                logger.debug(f"已下载 {media_type} 到 {file_path}")
             except Exception as e:
-                logger.error(f"Failed to download media: {e}")
-                content_parts.append(f"[{media_type}: download failed]")
+                logger.error(f"下载媒体失败：{e}")
+                content_parts.append(f"[{media_type}：下载失败]")
         
-        content = "\n".join(content_parts) if content_parts else "[empty message]"
+        content = "\n".join(content_parts) if content_parts else "[空消息]"
         
-        logger.debug(f"Telegram message from {sender_id}: {content[:50]}...")
+        logger.debug(f"来自 {sender_id} 的 Telegram 消息：{content[:50]}...")
         
-        # Forward to the message bus
+        # 转发到消息总线
         await self._handle_message(
             sender_id=sender_id,
             chat_id=str(chat_id),
@@ -289,7 +289,7 @@ class TelegramChannel(BaseChannel):
         )
     
     def _get_extension(self, media_type: str, mime_type: str | None) -> str:
-        """Get file extension based on media type."""
+        """根据媒体类型获取文件扩展名。"""
         if mime_type:
             ext_map = {
                 "image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif",

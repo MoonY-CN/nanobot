@@ -1,4 +1,4 @@
-"""Context builder for assembling agent prompts."""
+"""上下文构建器，用于组装代理提示词。"""
 
 import base64
 import mimetypes
@@ -12,10 +12,9 @@ from nanobot.agent.skills import SkillsLoader
 
 class ContextBuilder:
     """
-    Builds the context (system prompt + messages) for the agent.
+    为代理构建上下文（系统提示词 + 消息）。
     
-    Assembles bootstrap files, memory, skills, and conversation history
-    into a coherent prompt for the LLM.
+    将启动文件、记忆、技能和对话历史组装成连贯的 LLM 提示词。
     """
     
     BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md", "IDENTITY.md"]
@@ -27,51 +26,51 @@ class ContextBuilder:
     
     def build_system_prompt(self, skill_names: list[str] | None = None) -> str:
         """
-        Build the system prompt from bootstrap files, memory, and skills.
+        从启动文件、记忆和技能构建系统提示词。
         
-        Args:
-            skill_names: Optional list of skills to include.
+        参数:
+            skill_names: 可选的要包含的技能列表。
         
-        Returns:
-            Complete system prompt.
+        返回:
+            完整的系统提示词。
         """
         parts = []
         
-        # Core identity
+        # 核心身份
         parts.append(self._get_identity())
         
-        # Bootstrap files
+        # 启动文件
         bootstrap = self._load_bootstrap_files()
         if bootstrap:
             parts.append(bootstrap)
         
-        # Memory context
+        # 记忆上下文
         memory = self.memory.get_memory_context()
         if memory:
             parts.append(f"# Memory\n\n{memory}")
         
-        # Skills - progressive loading
-        # 1. Always-loaded skills: include full content
+        # 技能 - 渐进式加载
+        # 1. 常驻技能：包含完整内容
         always_skills = self.skills.get_always_skills()
         if always_skills:
             always_content = self.skills.load_skills_for_context(always_skills)
             if always_content:
                 parts.append(f"# Active Skills\n\n{always_content}")
         
-        # 2. Available skills: only show summary (agent uses read_file to load)
+        # 2. 可用技能：仅显示摘要（代理使用 read_file 加载）
         skills_summary = self.skills.build_skills_summary()
         if skills_summary:
             parts.append(f"""# Skills
 
-The following skills extend your capabilities. To use a skill, read its SKILL.md file using the read_file tool.
-Skills with available="false" need dependencies installed first - you can try installing them with apt/brew.
+以下技能扩展了你的能力。要使用技能，请使用 read_file 工具读取其 SKILL.md 文件。
+available="false" 的技能需要先安装依赖 - 你可以尝试使用 apt/brew 安装它们。
 
 {skills_summary}""")
         
         return "\n\n---\n\n".join(parts)
     
     def _get_identity(self) -> str:
-        """Get the core identity section."""
+        """获取核心身份部分。"""
         from datetime import datetime
         now = datetime.now().strftime("%Y-%m-%d %H:%M (%A)")
         workspace_path = str(self.workspace.expanduser().resolve())
@@ -107,7 +106,7 @@ Always be helpful, accurate, and concise. When using tools, explain what you're 
 When remembering something, write to {workspace_path}/memory/MEMORY.md"""
     
     def _load_bootstrap_files(self) -> str:
-        """Load all bootstrap files from workspace."""
+        """从工作区加载所有启动文件。"""
         parts = []
         
         for filename in self.BOOTSTRAP_FILES:
@@ -128,38 +127,38 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         chat_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Build the complete message list for an LLM call.
+        构建 LLM 调用的完整消息列表。
 
-        Args:
-            history: Previous conversation messages.
-            current_message: The new user message.
-            skill_names: Optional skills to include.
-            media: Optional list of local file paths for images/media.
-            channel: Current channel (telegram, feishu, etc.).
-            chat_id: Current chat/user ID.
+        参数:
+            history: 之前的对话消息。
+            current_message: 新的用户消息。
+            skill_names: 可选的要包含的技能。
+            media: 可选的媒体文件路径列表（图片等）。
+            channel: 当前频道（telegram、feishu 等）。
+            chat_id: 当前聊天/用户 ID。
 
-        Returns:
-            List of messages including system prompt.
+        返回:
+            包含系统提示词的消息列表。
         """
         messages = []
 
-        # System prompt
+        # 系统提示词
         system_prompt = self.build_system_prompt(skill_names)
         if channel and chat_id:
             system_prompt += f"\n\n## Current Session\nChannel: {channel}\nChat ID: {chat_id}"
         messages.append({"role": "system", "content": system_prompt})
 
-        # History
+        # 历史消息
         messages.extend(history)
 
-        # Current message (with optional image attachments)
+        # 当前消息（可选图片附件）
         user_content = self._build_user_content(current_message, media)
         messages.append({"role": "user", "content": user_content})
 
         return messages
 
     def _build_user_content(self, text: str, media: list[str] | None) -> str | list[dict[str, Any]]:
-        """Build user message content with optional base64-encoded images."""
+        """构建用户消息内容，可选 base64 编码的图片。"""
         if not media:
             return text
         
@@ -184,16 +183,16 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         result: str
     ) -> list[dict[str, Any]]:
         """
-        Add a tool result to the message list.
+        将工具结果添加到消息列表。
         
-        Args:
-            messages: Current message list.
-            tool_call_id: ID of the tool call.
-            tool_name: Name of the tool.
-            result: Tool execution result.
+        参数:
+            messages: 当前消息列表。
+            tool_call_id: 工具调用的 ID。
+            tool_name: 工具名称。
+            result: 工具执行结果。
         
-        Returns:
-            Updated message list.
+        返回:
+            更新后的消息列表。
         """
         messages.append({
             "role": "tool",
@@ -207,23 +206,23 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         self,
         messages: list[dict[str, Any]],
         content: str | None,
-        tool_calls: list[dict[str, Any]] | None = None
+        tool_calls: list[dict] | None = None
     ) -> list[dict[str, Any]]:
         """
-        Add an assistant message to the message list.
+        将助手消息添加到消息列表。
         
-        Args:
-            messages: Current message list.
-            content: Message content.
-            tool_calls: Optional tool calls.
+        参数:
+            messages: 当前消息列表。
+            content: 消息内容。
+            tool_calls: 可选的工具调用列表。
         
-        Returns:
-            Updated message list.
+        返回:
+            更新后的消息列表。
         """
-        msg: dict[str, Any] = {"role": "assistant", "content": content or ""}
-        
+        msg: dict[str, Any] = {"role": "assistant"}
+        if content:
+            msg["content"] = content
         if tool_calls:
             msg["tool_calls"] = tool_calls
-        
         messages.append(msg)
         return messages

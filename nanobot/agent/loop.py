@@ -1,4 +1,4 @@
-"""Agent loop: the core processing engine."""
+"""代理循环：核心处理引擎。"""
 
 import asyncio
 import json
@@ -24,14 +24,14 @@ from nanobot.session.manager import SessionManager
 
 class AgentLoop:
     """
-    The agent loop is the core processing engine.
+    代理循环是核心处理引擎。
     
-    It:
-    1. Receives messages from the bus
-    2. Builds context with history, memory, skills
-    3. Calls the LLM
-    4. Executes tool calls
-    5. Sends responses back
+    功能：
+    1. 从消息总线接收消息
+    2. 构建包含历史、记忆、技能的上下文
+    3. 调用大语言模型
+    4. 执行工具调用
+    5. 发送响应回用户
     """
     
     def __init__(
@@ -75,92 +75,92 @@ class AgentLoop:
         self._register_default_tools()
     
     def _register_default_tools(self) -> None:
-        """Register the default set of tools."""
-        # File tools (restrict to workspace if configured)
+        """注册默认工具集。"""
+        # 文件工具（如果配置了限制则限制在工作目录）
         allowed_dir = self.workspace if self.restrict_to_workspace else None
         self.tools.register(ReadFileTool(allowed_dir=allowed_dir))
         self.tools.register(WriteFileTool(allowed_dir=allowed_dir))
         self.tools.register(EditFileTool(allowed_dir=allowed_dir))
         self.tools.register(ListDirTool(allowed_dir=allowed_dir))
         
-        # Shell tool
+        # Shell 工具
         self.tools.register(ExecTool(
             working_dir=str(self.workspace),
             timeout=self.exec_config.timeout,
             restrict_to_workspace=self.restrict_to_workspace,
         ))
         
-        # Web tools
+        # Web 工具
         self.tools.register(WebSearchTool(api_key=self.brave_api_key))
         self.tools.register(WebFetchTool())
         
-        # Message tool
+        # 消息工具
         message_tool = MessageTool(send_callback=self.bus.publish_outbound)
         self.tools.register(message_tool)
         
-        # Spawn tool (for subagents)
+        # Spawn 工具（用于子代理）
         spawn_tool = SpawnTool(manager=self.subagents)
         self.tools.register(spawn_tool)
         
-        # Cron tool (for scheduling)
+        # Cron 工具（用于定时任务）
         if self.cron_service:
             self.tools.register(CronTool(self.cron_service))
     
     async def run(self) -> None:
-        """Run the agent loop, processing messages from the bus."""
+        """运行代理循环，处理来自总线的消息。"""
         self._running = True
-        logger.info("Agent loop started")
+        logger.info("Agent 循环已启动")
         
         while self._running:
             try:
-                # Wait for next message
+                # 等待下一条消息
                 msg = await asyncio.wait_for(
                     self.bus.consume_inbound(),
                     timeout=1.0
                 )
                 
-                # Process it
+                # 处理消息
                 try:
                     response = await self._process_message(msg)
                     if response:
                         await self.bus.publish_outbound(response)
                 except Exception as e:
-                    logger.error(f"Error processing message: {e}")
-                    # Send error response
+                    logger.error(f"处理消息时出错: {e}")
+                    # 发送错误响应
                     await self.bus.publish_outbound(OutboundMessage(
                         channel=msg.channel,
                         chat_id=msg.chat_id,
-                        content=f"Sorry, I encountered an error: {str(e)}"
+                        content=f"抱歉，我遇到了错误: {str(e)}"
                     ))
             except asyncio.TimeoutError:
                 continue
     
     def stop(self) -> None:
-        """Stop the agent loop."""
+        """停止代理循环。"""
         self._running = False
-        logger.info("Agent loop stopping")
+        logger.info("Agent 循环正在停止")
     
     async def _process_message(self, msg: InboundMessage) -> OutboundMessage | None:
         """
-        Process a single inbound message.
+        处理单条入站消息。
         
-        Args:
-            msg: The inbound message to process.
+        参数:
+            msg: 要处理的入站消息。
         
-        Returns:
-            The response message, or None if no response needed.
+        返回:
+            响应消息，如果不需要响应则返回 None。
         """
-        # Handle system messages (subagent announces)
-        # The chat_id contains the original "channel:chat_id" to route back to
+        # 处理系统消息（子代理通知）
+        # chat_id 包含原始的 "channel:chat_id" 用于路由回正确位置
         if msg.channel == "system":
             return await self._process_system_message(msg)
         
-        logger.info(f"Processing message from {msg.channel}:{msg.sender_id}")
+        logger.info(f"正在处理来自 {msg.channel}:{msg.sender_id} 的消息")
         
-        # Get or create session
+        # 获取或创建会话
         session = self.sessions.get_or_create(msg.session_key)
         
-        # Update tool contexts
+        # 更新工具上下文
         message_tool = self.tools.get("message")
         if isinstance(message_tool, MessageTool):
             message_tool.set_context(msg.channel, msg.chat_id)

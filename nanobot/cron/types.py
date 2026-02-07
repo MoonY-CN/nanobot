@@ -1,4 +1,4 @@
-"""Cron types."""
+"""定时任务类型定义。"""
 
 from dataclasses import dataclass, field
 from typing import Literal
@@ -6,32 +6,32 @@ from typing import Literal
 
 @dataclass
 class CronSchedule:
-    """Schedule definition for a cron job."""
+    """定时任务的调度定义。"""
     kind: Literal["at", "every", "cron"]
-    # For "at": timestamp in ms
+    # 用于 "at"：毫秒时间戳
     at_ms: int | None = None
-    # For "every": interval in ms
+    # 用于 "every"：毫秒间隔
     every_ms: int | None = None
-    # For "cron": cron expression (e.g. "0 9 * * *")
+    # 用于 "cron"：cron 表达式（例如 "0 9 * * *"）
     expr: str | None = None
-    # Timezone for cron expressions
+    # cron 表达式的时区
     tz: str | None = None
 
 
 @dataclass
 class CronPayload:
-    """What to do when the job runs."""
+    """任务运行时要执行的操作。"""
     kind: Literal["system_event", "agent_turn"] = "agent_turn"
     message: str = ""
-    # Deliver response to channel
+    # 是否将响应发送到频道
     deliver: bool = False
-    channel: str | None = None  # e.g. "whatsapp"
-    to: str | None = None  # e.g. phone number
+    channel: str | None = None  # 例如 "whatsapp"
+    to: str | None = None  # 例如电话号码
 
 
 @dataclass
 class CronJobState:
-    """Runtime state of a job."""
+    """任务的运行时状态。"""
     next_run_at_ms: int | None = None
     last_run_at_ms: int | None = None
     last_status: Literal["ok", "error", "skipped"] | None = None
@@ -40,7 +40,7 @@ class CronJobState:
 
 @dataclass
 class CronJob:
-    """A scheduled job."""
+    """一个定时任务。"""
     id: str
     name: str
     enabled: bool = True
@@ -54,6 +54,6 @@ class CronJob:
 
 @dataclass
 class CronStore:
-    """Persistent store for cron jobs."""
+    """定时任务的持久化存储。"""
     version: int = 1
     jobs: list[CronJob] = field(default_factory=list)

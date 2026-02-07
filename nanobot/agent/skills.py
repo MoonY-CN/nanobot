@@ -159,7 +159,13 @@ class SkillsLoader:
         return name  # Fallback to skill name
     
     def _strip_frontmatter(self, content: str) -> str:
-        """Remove YAML frontmatter from markdown content."""
+        """
+        去除 Markdown 内容中的 YAML 前置元数据（frontmatter）。
+
+        如果内容以 '---' 开头，则认为存在 frontmatter，使用正则匹配
+        从开始到第二个 '---\n' 之间的内容并将其剔除，返回剩余正文。
+        若无 frontmatter，则原样返回。
+        """
         if content.startswith("---"):
             match = re.match(r"^---\n.*?\n---\n", content, re.DOTALL)
             if match:

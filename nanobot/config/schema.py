@@ -1,4 +1,4 @@
-"""Configuration schema using Pydantic."""
+"""使用 Pydantic 的配置模式定义。"""
 
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -6,41 +6,41 @@ from pydantic_settings import BaseSettings
 
 
 class WhatsAppConfig(BaseModel):
-    """WhatsApp channel configuration."""
+    """WhatsApp 频道配置。"""
     enabled: bool = False
     bridge_url: str = "ws://localhost:3001"
-    allow_from: list[str] = Field(default_factory=list)  # Allowed phone numbers
+    allow_from: list[str] = Field(default_factory=list)  # 允许的电话号码
 
 
 class TelegramConfig(BaseModel):
-    """Telegram channel configuration."""
+    """Telegram 频道配置。"""
     enabled: bool = False
-    token: str = ""  # Bot token from @BotFather
-    allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs or usernames
-    proxy: str | None = None  # HTTP/SOCKS5 proxy URL, e.g. "http://127.0.0.1:7890" or "socks5://127.0.0.1:1080"
+    token: str = ""  # 从 @BotFather 获取的机器人令牌
+    allow_from: list[str] = Field(default_factory=list)  # 允许的用户 ID 或用户名
+    proxy: str | None = None  # HTTP/SOCKS5 代理 URL，例如 "http://127.0.0.1:7890" 或 "socks5://127.0.0.1:1080"
 
 
 class FeishuConfig(BaseModel):
-    """Feishu/Lark channel configuration using WebSocket long connection."""
+    """飞书/Lark 频道配置，使用 WebSocket 长连接。"""
     enabled: bool = False
-    app_id: str = ""  # App ID from Feishu Open Platform
-    app_secret: str = ""  # App Secret from Feishu Open Platform
-    encrypt_key: str = ""  # Encrypt Key for event subscription (optional)
-    verification_token: str = ""  # Verification Token for event subscription (optional)
-    allow_from: list[str] = Field(default_factory=list)  # Allowed user open_ids
+    app_id: str = ""  # 从飞书开放平台获取的 App ID
+    app_secret: str = ""  # 从飞书开放平台获取的 App Secret
+    encrypt_key: str = ""  # 事件订阅的加密密钥（可选）
+    verification_token: str = ""  # 事件订阅的验证令牌（可选）
+    allow_from: list[str] = Field(default_factory=list)  # 允许的用户 open_id
 
 
 class DiscordConfig(BaseModel):
-    """Discord channel configuration."""
+    """Discord 频道配置。"""
     enabled: bool = False
-    token: str = ""  # Bot token from Discord Developer Portal
-    allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs
+    token: str = ""  # 从 Discord 开发者门户获取的机器人令牌
+    allow_from: list[str] = Field(default_factory=list)  # 允许的用户 ID
     gateway_url: str = "wss://gateway.discord.gg/?v=10&encoding=json"
     intents: int = 37377  # GUILDS + GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
 
 
 class ChannelsConfig(BaseModel):
-    """Configuration for chat channels."""
+    """聊天频道配置。"""
     whatsapp: WhatsAppConfig = Field(default_factory=WhatsAppConfig)
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
     discord: DiscordConfig = Field(default_factory=DiscordConfig)
@@ -48,7 +48,7 @@ class ChannelsConfig(BaseModel):
 
 
 class AgentDefaults(BaseModel):
-    """Default agent configuration."""
+    """代理默认配置。"""
     workspace: str = "~/.nanobot/workspace"
     model: str = "anthropic/claude-opus-4-5"
     max_tokens: int = 8192
@@ -57,18 +57,18 @@ class AgentDefaults(BaseModel):
 
 
 class AgentsConfig(BaseModel):
-    """Agent configuration."""
+    """代理配置。"""
     defaults: AgentDefaults = Field(default_factory=AgentDefaults)
 
 
 class ProviderConfig(BaseModel):
-    """LLM provider configuration."""
+    """LLM 提供商配置。"""
     api_key: str = ""
     api_base: str | None = None
 
 
 class ProvidersConfig(BaseModel):
-    """Configuration for LLM providers."""
+    """LLM 提供商配置。"""
     anthropic: ProviderConfig = Field(default_factory=ProviderConfig)
     openai: ProviderConfig = Field(default_factory=ProviderConfig)
     openrouter: ProviderConfig = Field(default_factory=ProviderConfig)
@@ -82,36 +82,36 @@ class ProvidersConfig(BaseModel):
 
 
 class GatewayConfig(BaseModel):
-    """Gateway/server configuration."""
+    """网关/服务器配置。"""
     host: str = "0.0.0.0"
     port: int = 18790
 
 
 class WebSearchConfig(BaseModel):
-    """Web search tool configuration."""
-    api_key: str = ""  # Brave Search API key
+    """网页搜索工具配置。"""
+    api_key: str = ""  # Brave Search API 密钥
     max_results: int = 5
 
 
 class WebToolsConfig(BaseModel):
-    """Web tools configuration."""
+    """Web 工具配置。"""
     search: WebSearchConfig = Field(default_factory=WebSearchConfig)
 
 
 class ExecToolConfig(BaseModel):
-    """Shell exec tool configuration."""
+    """Shell 执行工具配置。"""
     timeout: int = 60
 
 
 class ToolsConfig(BaseModel):
-    """Tools configuration."""
+    """工具配置。"""
     web: WebToolsConfig = Field(default_factory=WebToolsConfig)
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
-    restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
+    restrict_to_workspace: bool = False  # 如果为 true，限制所有工具访问工作区目录
 
 
 class Config(BaseSettings):
-    """Root configuration for nanobot."""
+    """nanobot 的根配置。"""
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
@@ -120,13 +120,13 @@ class Config(BaseSettings):
     
     @property
     def workspace_path(self) -> Path:
-        """Get expanded workspace path."""
+        """获取展开后的工作区路径。"""
         return Path(self.agents.defaults.workspace).expanduser()
     
     def _match_provider(self, model: str | None = None) -> ProviderConfig | None:
-        """Match a provider based on model name."""
+        """根据模型名称匹配提供商。"""
         model = (model or self.agents.defaults.model).lower()
-        # Map of keywords to provider configs
+        # 关键词到提供商配置的映射
         providers = {
             "openrouter": self.providers.openrouter,
             "deepseek": self.providers.deepseek,
@@ -151,12 +151,12 @@ class Config(BaseSettings):
         return None
 
     def get_api_key(self, model: str | None = None) -> str | None:
-        """Get API key for the given model (or default model). Falls back to first available key."""
-        # Try matching by model name first
+        """获取给定模型（或默认模型）的 API 密钥。回退到第一个可用的密钥。"""
+        # 首先尝试按模型名称匹配
         matched = self._match_provider(model)
         if matched:
             return matched.api_key
-        # Fallback: return first available key
+        # 回退：返回第一个可用的密钥
         for provider in [
             self.providers.openrouter, self.providers.deepseek,
             self.providers.anthropic, self.providers.openai,
@@ -169,7 +169,7 @@ class Config(BaseSettings):
         return None
     
     def get_api_base(self, model: str | None = None) -> str | None:
-        """Get API base URL based on model name."""
+        """根据模型名称获取 API 基础 URL。"""
         model = (model or self.agents.defaults.model).lower()
         if "openrouter" in model:
             return self.providers.openrouter.api_base or "https://openrouter.ai/api/v1"

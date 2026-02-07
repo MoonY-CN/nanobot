@@ -1,4 +1,4 @@
-"""Base channel interface for chat platforms."""
+"""聊天平台的频道基类接口。"""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -11,21 +11,20 @@ from nanobot.bus.queue import MessageBus
 
 class BaseChannel(ABC):
     """
-    Abstract base class for chat channel implementations.
+    聊天频道实现的抽象基类。
     
-    Each channel (Telegram, Discord, etc.) should implement this interface
-    to integrate with the nanobot message bus.
+    每个频道（Telegram、Discord 等）都应该实现此接口以集成到 nanobot 消息总线。
     """
     
     name: str = "base"
     
     def __init__(self, config: Any, bus: MessageBus):
         """
-        Initialize the channel.
+        初始化频道。
         
-        Args:
-            config: Channel-specific configuration.
-            bus: The message bus for communication.
+        参数:
+            config: 频道特定的配置。
+            bus: 用于通信的消息总线。
         """
         self.config = config
         self.bus = bus
@@ -34,43 +33,43 @@ class BaseChannel(ABC):
     @abstractmethod
     async def start(self) -> None:
         """
-        Start the channel and begin listening for messages.
+        启动频道并开始监听消息。
         
-        This should be a long-running async task that:
-        1. Connects to the chat platform
-        2. Listens for incoming messages
-        3. Forwards messages to the bus via _handle_message()
+        这应该是一个长期运行的异步任务，需要：
+        1. 连接到聊天平台
+        2. 监听入站消息
+        3. 通过 _handle_message() 将消息转发到总线
         """
         pass
     
     @abstractmethod
     async def stop(self) -> None:
-        """Stop the channel and clean up resources."""
+        """停止频道并清理资源。"""
         pass
     
     @abstractmethod
     async def send(self, msg: OutboundMessage) -> None:
         """
-        Send a message through this channel.
+        通过此频道发送消息。
         
-        Args:
-            msg: The message to send.
+        参数:
+            msg: 要发送的消息。
         """
         pass
     
     def is_allowed(self, sender_id: str) -> bool:
         """
-        Check if a sender is allowed to use this bot.
+        检查发送者是否被允许使用此机器人。
         
-        Args:
-            sender_id: The sender's identifier.
+        参数:
+            sender_id: 发送者的标识符。
         
-        Returns:
-            True if allowed, False otherwise.
+        返回:
+            如果允许返回 True，否则返回 False。
         """
         allow_list = getattr(self.config, "allow_from", [])
         
-        # If no allow list, allow everyone
+        # 如果没有允许列表，允许所有人
         if not allow_list:
             return True
         
@@ -92,24 +91,23 @@ class BaseChannel(ABC):
         metadata: dict[str, Any] | None = None
     ) -> None:
         """
-        Handle an incoming message from the chat platform.
+        处理来自聊天平台的入站消息。
         
-        This method checks permissions and forwards to the bus.
+        此方法检查权限并将消息转发到总线。
         
-        Args:
-            sender_id: The sender's identifier.
-            chat_id: The chat/channel identifier.
-            content: Message text content.
-            media: Optional list of media URLs.
-            metadata: Optional channel-specific metadata.
+        参数:
+            sender_id: 发送者的标识符。
+            chat_id: 聊天/频道标识符。
+            content: 消息内容。
+            media: 可选的媒体 URL 列表。
+            metadata: 可选的频道特定元数据。
         """
+        # 检查发送者是否在允许列表中
         if not self.is_allowed(sender_id):
-            logger.warning(
-                f"Access denied for sender {sender_id} on channel {self.name}. "
-                f"Add them to allowFrom list in config to grant access."
-            )
+            logger.warning(f"拒绝来自 {sender_id} 的消息（不在允许列表中）")
             return
         
+        # 创建入站消息事件
         msg = InboundMessage(
             channel=self.name,
             sender_id=str(sender_id),
@@ -119,9 +117,5 @@ class BaseChannel(ABC):
             metadata=metadata or {}
         )
         
+        # 发布到总线
         await self.bus.publish_inbound(msg)
-    
-    @property
-    def is_running(self) -> bool:
-        """Check if the channel is running."""
-        return self._running

@@ -1,4 +1,4 @@
-"""Spawn tool for creating background subagents."""
+"""用于创建后台子代理的生成工具。"""
 
 from typing import Any, TYPE_CHECKING
 
@@ -10,10 +10,9 @@ if TYPE_CHECKING:
 
 class SpawnTool(Tool):
     """
-    Tool to spawn a subagent for background task execution.
+    用于生成子代理以执行后台任务的工具。
     
-    The subagent runs asynchronously and announces its result back
-    to the main agent when complete.
+    子代理异步运行，并在完成时将结果通知回主代理。
     """
     
     def __init__(self, manager: "SubagentManager"):
@@ -22,7 +21,7 @@ class SpawnTool(Tool):
         self._origin_chat_id = "direct"
     
     def set_context(self, channel: str, chat_id: str) -> None:
-        """Set the origin context for subagent announcements."""
+        """设置子代理通知的源上下文。"""
         self._origin_channel = channel
         self._origin_chat_id = chat_id
     
@@ -33,9 +32,9 @@ class SpawnTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "Spawn a subagent to handle a task in the background. "
-            "Use this for complex or time-consuming tasks that can run independently. "
-            "The subagent will complete the task and report back when done."
+            "生成一个子代理在后台处理任务。"
+            "用于可以独立运行的复杂或耗时任务。"
+            "子代理将完成任务并在完成后报告。"
         )
     
     @property
@@ -45,18 +44,27 @@ class SpawnTool(Tool):
             "properties": {
                 "task": {
                     "type": "string",
-                    "description": "The task for the subagent to complete",
+                    "description": "子代理要完成的任务",
                 },
                 "label": {
                     "type": "string",
-                    "description": "Optional short label for the task (for display)",
+                    "description": "任务的可选简短标签（用于显示）",
                 },
             },
             "required": ["task"],
         }
     
     async def execute(self, task: str, label: str | None = None, **kwargs: Any) -> str:
-        """Spawn a subagent to execute the given task."""
+        """
+        生成子代理在后台执行给定任务。
+        
+        参数:
+            task: 子代理的任务描述。
+            label: 任务的可选人类可读标签。
+            
+        返回:
+            指示子代理已启动的状态消息。
+        """
         return await self._manager.spawn(
             task=task,
             label=label,
